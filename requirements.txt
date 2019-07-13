@@ -1,0 +1,10 @@
+certifi==2019.6.16
+chardet==3.0.4
+idna==2.8
+python-twitch-client==0.6.0
+PyYAML==5.1.1
+requests==2.22.0
+Rx==1.6.1
+six==1.12.0
+twitch-python==0.0.11
+urllib3==1.25.3
