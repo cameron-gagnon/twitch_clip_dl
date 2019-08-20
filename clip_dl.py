@@ -1,3 +1,6 @@
+#!./venv/bin/python
+
+import hashlib
 import os
 import re
 import requests
@@ -19,9 +22,8 @@ client_id = config['client_id']
 client = twitch.TwitchClient(client_id=client_id)
 clips = client.clips
 
-basepath = 'clips/'
-base_clip_path = 'https://clips-media-assets2.twitch.tv/'
-
+channel = 'stroopc'
+basepath = '/mnt/d/src/adobe/premiere/twitch/twitch_clips/'
 
 def dl_progress(count, block_size, total_size):
     percent = int(count * block_size * 100 / total_size)
@@ -47,35 +49,86 @@ def retrieve_mp4_data(slug):
 def already_downloaded(filename):
     return os.path.isfile(filename)
 
-def download_clips(channel="stroopc", cursor=100, limit=100, period="all"):
-    channel_clips = clips.get_top(channel=channel, limit=limit, period=period)
+def get_MD5(filename):
+    hasher = hashlib.md5()
+    with open(filename, 'rb') as in_file:
+        buf = in_file.read()
+        hasher.update(buf)
+    return hasher.hexdigest()
+
+def is_duplicate(out_path, out_path_dup):
+    hash1 = get_MD5(out_path)
+    hash2 = get_MD5(out_path_dup)
+    return hash1 == hash2
+
+def download_clips(channel_clips):
+    print(channel_clips)
 
     for clip in channel_clips:
-        clip_title = clip.title.replace(' ', '_')
-        regex = re.compile('[^a-zA-Z0-9_]')
-        out_filename = regex.sub('', clip_title) + '.mp4'
-        output_path = (basepath + out_filename)
-
-        if already_downloaded(output_path):
-            print("Skipping file", clip_title, "already downloaded it")
+        out_path, out_filename = generate_filename(clip)
+        if not already_downloaded(out_path):
+            download(clip, out_path, out_filename)
             continue
 
-        print("Downloading", clip_title, "from:", clip.url)
-        slug = clip.slug
-        mp4_url = retrieve_mp4_data(slug)
+        out_path_dup, out_filename_dup = generate_filename(clip, iterate=True)
+        # needs to be downloaded before we can get its MD5 hash
+        download(clip, out_path_dup, out_filename_dup)
+        if is_duplicate(out_path, out_path_dup):
+            print("Removing clip: ", out_filename_dup, "already downloaded it")
+            os.remove(out_path_dup)
+            continue
 
-        print('\nDownloading clip slug: ' + slug)
-        print('"' + clip_title + '" -> ' + out_filename)
-        print(mp4_url)
-        urllib.request.urlretrieve(mp4_url, output_path, reporthook=dl_progress)
-        print('\nDone.')
+def generate_filename(clip, iterate=False):
+    clip_title = clip.title.replace(' ', '_')
+    regex = re.compile('[^a-zA-Z0-9_]')
+    out_filename = regex.sub('', clip_title)
+    if iterate:
+        i = 0
+        while already_downloaded(basepath + out_filename + '_{}'.format(i)):
+            print('File already occupied: ', basepath + out_filename + '_{}'.format(i))
+            i += 1
+        out_filename += '_{}'.format(i)
 
+    out_filename += '.mp4'
+
+    out_path = (basepath + out_filename)
+    return out_path, out_filename
+
+def download(clip, out_path, out_filename):
+    print("Downloading", out_filename, "from:", clip.url)
+    slug = clip.slug
+    mp4_url = retrieve_mp4_data(slug)
+
+    print('\nDownloading clip slug: ' + slug)
+    print(out_filename, mp4_url)
+    urllib.request.urlretrieve(mp4_url, out_path, reporthook=dl_progress)
+    print('\nDone.')
+
+def process_clip_link_file(link_file):
+    channel_clips = []
+    with open(link_file, 'r') as links:
+        for link in links:
+            clip = clips.get_by_slug(link[link.rfind('/')+1:].strip())
+            channel_clips.append(clip)
+
+    return channel_clips
 
 def main():
-    duration = "all"
+    durations = ['day', 'week', 'month', 'all']
+    duration = durations[1]
+
+    channel_clips = []
     if len(sys.argv) > 1:
-        duration = sys.argv[1]
-    download_clips(period=duration)
+        for arg in sys.argv:
+            if 'twitch_clip_links_all' in arg:
+                channel_clips = process_clip_link_file(arg)
+                print('processed link file')
+            elif arg in ['day', 'week', 'month', 'all']:
+                channel_clips = clips.get_top(channel='stroopc', limit=100, period=arg)
+        if not channel_clips:
+            print("Error, please include twitch link or duration in {}".format(durations))
+
+    download_clips(channel_clips)
     print('Finished downloading all the videos.')
 
 
