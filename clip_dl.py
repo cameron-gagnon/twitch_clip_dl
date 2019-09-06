@@ -41,6 +41,9 @@ def retrieve_mp4_data(slug):
         sleep(30)
         return retrieve_mp4_data(slug)
 
+    if len(clip_info['data']) == 0:
+        print("Couldn't download clip: ", clip_info)
+        return
     thumb_url = clip_info['data'][0]['thumbnail_url']
     slice_point = thumb_url.index("-preview-")
     mp4_url = thumb_url[:slice_point] + '.mp4'
@@ -84,8 +87,8 @@ def generate_filename(clip, iterate=False):
     out_filename = regex.sub('', clip_title)
     if iterate:
         i = 0
-        while already_downloaded(basepath + out_filename + '_{}'.format(i)):
-            print('File already occupied: ', basepath + out_filename + '_{}'.format(i))
+        while already_downloaded(basepath + out_filename + '_{}.mp4'.format(i)):
+            print('File already occupied: ', basepath + out_filename + '_{}.mp4'.format(i))
             i += 1
         out_filename += '_{}'.format(i)
 
