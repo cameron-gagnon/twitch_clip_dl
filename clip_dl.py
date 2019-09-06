@@ -68,42 +68,62 @@ def download_clips(channel_clips):
     print(channel_clips)
 
     for clip in channel_clips:
-        out_path, out_filename = generate_filename(clip)
+        out_path, out_f = generate_filename(clip)
         if not already_downloaded(out_path):
-            download(clip, out_path, out_filename)
+            download(clip, out_path, out_f)
             continue
 
         out_path_dup, out_filename_dup = generate_filename(clip, iterate=True)
         # needs to be downloaded before we can get its MD5 hash
         download(clip, out_path_dup, out_filename_dup)
-        if is_duplicate(out_path, out_path_dup):
-            print("Removing clip: ", out_filename_dup, "already downloaded it")
-            os.remove(out_path_dup)
-            continue
+        filenames = [file_ for file_ in iterate_filenames(clip)]
+        if filenames:
+            filenames = filenames[:-1]
+        for file_path in filenames:
+            if is_duplicate(file_path, out_path_dup):
+                print("Removing clip: ", out_path_dup, "already downloaded it")
+                os.remove(out_path_dup)
+                break
+            else:
+                print("SAME FILES:", file_path, out_path_dup)
 
-def generate_filename(clip, iterate=False):
+
+def out_filename(clip):
     clip_title = clip.title.replace(' ', '_')
     regex = re.compile('[^a-zA-Z0-9_]')
-    out_filename = regex.sub('', clip_title)
+    out_f = regex.sub('', clip_title)
+    return out_f
+
+# generates [XXX_0.mp4, ..., XXX_4.mp4] from the clip
+def iterate_filenames(clip):
+    out_f = out_filename(clip)
+    i = 0
+    out_file_to_test = basepath + out_f + '_{}.mp4'.format(i)
+    print('out_file_to_test', out_file_to_test)
+    while already_downloaded(out_file_to_test):
+        yield out_file_to_test
+        i += 1
+        out_file_to_test = basepath + out_f + '_{}.mp4'.format(i)
+
+def generate_filename(clip, iterate=False):
+    out_f = out_filename(clip)
+    i = 0
     if iterate:
-        i = 0
-        while already_downloaded(basepath + out_filename + '_{}.mp4'.format(i)):
-            print('File already occupied: ', basepath + out_filename + '_{}.mp4'.format(i))
+        while already_downloaded(basepath + out_f + '_{}.mp4'.format(i)):
             i += 1
-        out_filename += '_{}'.format(i)
 
-    out_filename += '.mp4'
+    out_f += '_{}.mp4'.format(i)
 
-    out_path = (basepath + out_filename)
-    return out_path, out_filename
+    out_path = (basepath + out_f)
+    return out_path, out_f
 
-def download(clip, out_path, out_filename):
-    print("Downloading", out_filename, "from:", clip.url)
+def download(clip, out_path, out_f):
+    print("Downloading", out_f, "from:", clip.url)
     slug = clip.slug
     mp4_url = retrieve_mp4_data(slug)
 
     print('\nDownloading clip slug: ' + slug)
-    print(out_filename, mp4_url)
+    print(out_f, mp4_url)
     urllib.request.urlretrieve(mp4_url, out_path, reporthook=dl_progress)
     print('\nDone.')
 
