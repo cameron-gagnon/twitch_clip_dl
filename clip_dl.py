@@ -23,7 +23,7 @@ client = twitch.TwitchClient(client_id=client_id)
 clips = client.clips
 
 channel = 'stroopc'
-basepath = '/mnt/d/src/adobe/premiere/twitch/twitch_clips/'
+basepath = '/mnt/e/src/adobe/premiere/twitch/twitch_clips/'
 
 def dl_progress(count, block_size, total_size):
     percent = int(count * block_size * 100 / total_size)
@@ -86,6 +86,7 @@ def download_clips(channel_clips):
                 break
             else:
                 print("SAME FILES:", file_path, out_path_dup)
+    print("Downloaded {} clips".format(len(channel_clips)))
 
 
 def out_filename(clip):
