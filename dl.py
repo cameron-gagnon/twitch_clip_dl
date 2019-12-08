@@ -128,14 +128,18 @@ def download(clip, out_path, out_f):
     urllib.request.urlretrieve(mp4_url, out_path, reporthook=dl_progress)
     print('\nDone.')
 
+def extract_slug(link):
+    return link[link.rfind('/')+1:].strip()
+
 def process_clip_link_file(link_file):
     channel_clips = []
     with open(link_file, 'r') as links:
         for link in links:
-            clip = clips.get_by_slug(link[link.rfind('/')+1:].strip())
+            clip = clips.get_by_slug(extract_slug(link))
             channel_clips.append(clip)
 
     return channel_clips
+
 
 def main():
     durations = ['day', 'week', 'month', 'all']
@@ -144,11 +148,13 @@ def main():
     channel_clips = []
     if len(sys.argv) > 1:
         for arg in sys.argv:
-            if 'twitch_clip_links_all' in arg:
+            if arg in ['day', 'week', 'month', 'all']:
+                channel_clips = clips.get_top(channel='stroopc', limit=100, period=arg)
+            elif 'http' in arg:
+                channel_clips = [clips.get_by_slug(extract_slug(arg))]
+            elif 'twitch_clip_links_all' in arg:
                 channel_clips = process_clip_link_file(arg)
                 print('processed link file')
-            elif arg in ['day', 'week', 'month', 'all']:
-                channel_clips = clips.get_top(channel='stroopc', limit=100, period=arg)
         if not channel_clips:
             print("Error, please include twitch link or duration in {}".format(durations))
 
