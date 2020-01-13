@@ -65,7 +65,7 @@ def is_duplicate(out_path, out_path_dup):
     return hash1 == hash2
 
 def download_clips(channel_clips):
-    print(channel_clips)
+    print("Downloading: {} clips".format(len(channel_clips)))
 
     for clip in channel_clips:
         out_path, out_f = generate_filename(clip)
@@ -123,7 +123,6 @@ def download(clip, out_path, out_f):
     slug = clip.slug
     mp4_url = retrieve_mp4_data(slug)
 
-    print('\nDownloading clip slug: ' + slug)
     print(out_f, mp4_url)
     urllib.request.urlretrieve(mp4_url, out_path, reporthook=dl_progress)
     print('\nDone.')
