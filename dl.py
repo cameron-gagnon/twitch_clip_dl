@@ -9,7 +9,7 @@ import twitch
 import urllib.request
 import yaml
 
-from datetime import timedelta
+import datetime
 from time import sleep
 
 config = None
@@ -94,7 +94,7 @@ def base_path_for_clip(clip):
     game = clip['game']
     # assign the date of the beginning of the week the clip was created. this
     # puts all clips created in the same week under the same folder.
-    clip_binned_date = clip_created_at - timedelta(days=(clip_created_at.weekday()+1) % 7)
+    clip_binned_date = clip_created_at - datetime.timedelta(days=(clip_created_at.weekday()+1) % 7)
 
     full_path = "{}/{}/{}".format(basepath,
             clip_binned_date.strftime("%m-%d-%Y"), game.lower())
@@ -105,7 +105,11 @@ def base_path_for_clip(clip):
 
 def vod_created_date(clip):
     global vod_infos
-    vod_id = clip['vod']['id']
+    try:
+        vod_id = clip['vod']['id']
+    except:
+        return datetime.datetime(1980,1,1)
+
     if not vod_infos.get(vod_id):
         vod_created_at = client.videos.get_by_id(vod_id)['created_at']
         vod_infos[vod_id] = vod_created_at
